@@ -17,6 +17,7 @@ func resourceStorageBucketObject() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceStorageBucketObjectCreate,
 		Read:   resourceStorageBucketObjectRead,
+		Update: resourceStorageBucketObjectUpdate,
 		Delete: resourceStorageBucketObjectDelete,
 
 		Schema: map[string]*schema.Schema{
@@ -72,11 +73,13 @@ func resourceStorageBucketObject() *schema.Resource {
 
 			"crc32c": &schema.Schema{
 				Type:     schema.TypeString,
+				Optional: true,
 				Computed: true,
 			},
 
 			"md5hash": &schema.Schema{
 				Type:     schema.TypeString,
+				Optional: true,
 				Computed: true,
 			},
 
@@ -88,10 +91,11 @@ func resourceStorageBucketObject() *schema.Resource {
 			},
 
 			"source": &schema.Schema{
-				Type:          schema.TypeString,
-				Optional:      true,
-				ForceNew:      true,
-				ConflictsWith: []string{"content"},
+				Type:             schema.TypeString,
+				Optional:         true,
+				ForceNew:         true,
+				ConflictsWith:    []string{"content"},
+				DiffSuppressFunc: diffSource,
 			},
 
 			"storage_class": &schema.Schema{
@@ -154,6 +158,14 @@ func resourceStorageBucketObjectCreate(d *schema.ResourceData, meta interface{})
 		object.StorageClass = v.(string)
 	}
 
+	if v, ok := d.GetOk("md5hash"); ok {
+		object.Md5Hash = v.(string)
+	}
+
+	if v, ok := d.GetOk("crc32c"); ok {
+		object.Crc32c = v.(string)
+	}
+
 	insertCall := objectsService.Insert(bucket, object)
 	insertCall.Name(name)
 	insertCall.Media(media)
@@ -171,6 +183,9 @@ func resourceStorageBucketObjectCreate(d *schema.ResourceData, meta interface{})
 }
 
 func resourceStorageBucketObjectRead(d *schema.ResourceData, meta interface{}) error {
+
+	log.Printf("[WARN] =========================> Read?")
+
 	config := meta.(*Config)
 
 	bucket := d.Get("bucket").(string)
@@ -199,6 +214,66 @@ func resourceStorageBucketObjectRead(d *schema.ResourceData, meta interface{}) e
 	return nil
 }
 
+func resourceStorageBucketObjectUpdate(d *schema.ResourceData, meta interface{}) error {
+
+	// config := meta.(*Config)
+
+	// bucket := d.Get("bucket").(string)
+	// name := d.Get("name").(string)
+
+	// objectsService := storage.NewObjectsService(config.clientStorage)
+	// getCall := objectsService.Get(bucket, name)
+
+	// res, err := getCall.Do()
+
+	// if err != nil {
+	// 	return handleNotFoundError(err, d, fmt.Sprintf("Storage Bucket Object %q", d.Get("name").(string)))
+	// }
+
+	// if v, ok := d.GetOk("cache_control"); ok {
+	// 	object.CacheControl = v.(string)
+	// }
+
+	// if v, ok := d.GetOk("content_disposition"); ok {
+	// 	object.ContentDisposition = v.(string)
+	// }
+
+	// if v, ok := d.GetOk("content_encoding"); ok {
+	// 	object.ContentEncoding = v.(string)
+	// }
+
+	// if v, ok := d.GetOk("content_language"); ok {
+	// 	object.ContentLanguage = v.(string)
+	// }
+
+	// if v, ok := d.GetOk("content_type"); ok {
+	// 	object.ContentType = v.(string)
+	// }
+
+	// if v, ok := d.GetOk("storage_class"); ok {
+	// 	object.StorageClass = v.(string)
+	// }
+
+	// // Optimizations:
+	// // If the source changed, perform the insert
+	// // otherwise perform the patch
+
+	// insertCall := objectsService.Insert(bucket, object)
+	// insertCall.Name(name)
+	// insertCall.Media(media)
+	// if v, ok := d.GetOk("predefined_acl"); ok {
+	// 	insertCall.PredefinedAcl(v.(string))
+	// }
+
+	// _, err := insertCall.Do()
+
+	// if err != nil {
+	// 	return fmt.Errorf("Error uploading object %s: %s", name, err)
+	// }
+
+	return resourceStorageBucketObjectRead(d, meta)
+}
+
 func resourceStorageBucketObjectDelete(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(*Config)
 
@@ -223,4 +298,12 @@ func resourceStorageBucketObjectDelete(d *schema.ResourceData, meta interface{})
 	}
 
 	return nil
+}
+
+func diffSource(k, old, new string, d *schema.ResourceData) bool {
+
+	log.Printf("[WARN] ====================================> diffSource")
+	// generate the crc md5 and return true if they are the same
+	// call gsutil hash d.Get("source")
+	return true
 }
